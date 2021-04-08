@@ -1,119 +1,133 @@
-import logo from "./logo.svg";
-import "./App.css";
-import {
-  Container,
-  Row,
-  Col,
-  Button,
-  Alert,
-  Breadcrumb,
-  Card,
-  Form,
-} from "react-bootstrap";
+import { useState, useEffect } from "react";
+import { BrowserRouter as Router, Route } from "react-router-dom";
+import { Container, Card } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import Tasks from "./components/Tasks";
+import AddTask from "./components/AddTask";
+import About from "./components/About";
 
-function App() {
+const App = () => {
+  const [showAddTask, setShowAddTask] = useState(false);
+
+  const [tasks, setTasks] = useState([]);
+
+  useEffect(() => {
+    const getTasks = async () => {
+      const tasksFromServer = await fetchTasks();
+      setTasks(tasksFromServer);
+    };
+
+    getTasks();
+  }, []);
+
+  // Fetch Tasks
+  const fetchTasks = async () => {
+    const res = await fetch("http://localhost:5000/tasks");
+    const data = await res.json();
+
+    return data;
+  };
+
+  // Fetch Task
+  const fetchTask = async (id) => {
+    const res = await fetch(`http://localhost:5000/tasks/${id}`);
+    const data = await res.json();
+
+    return data;
+  };
+
+  // Add Task
+  const addTask = async (task) => {
+    const res = await fetch("http://localhost:5000/tasks", {
+      method: "POST",
+      headers: {
+        "Content-type": "application/json",
+      },
+      body: JSON.stringify(task),
+    });
+
+    const data = await res.json();
+    setTasks([...tasks, data]);
+
+    // console.log(task);
+    // const id = Math.floor(Math.random() * 10000) + 1;
+    // const newTask = { id, ...task };
+    // setTasks([...tasks, newTask]);
+  };
+
+  // Delete Task
+  const deleteTask = async (id) => {
+    await fetch(`http://localhost:5000/tasks/${id}`, { method: "DELETE" });
+    // console.log("delete", id);
+    setTasks(tasks.filter((task) => task.id !== id));
+  };
+
+  // Toggle Reminder
+  const toggleReminder = async (id) => {
+    // console.log(id);
+    const taskToToggle = await fetchTask(id);
+    const updTask = { ...taskToToggle, reminder: !taskToToggle.reminder };
+
+    const res = await fetch(`http://localhost:5000/tasks/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-type": "application/json",
+      },
+      body: JSON.stringify(updTask),
+    });
+
+    const data = await res.json();
+
+    setTasks(
+      tasks.map((task) =>
+        // task.id === id ? { ...task, reminder: !task.reminder } : task
+        task.id === id ? { ...task, reminder: data.reminder } : task
+      )
+    );
+  };
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <Container>
-          <Form>
-            <Row>
-              <Col md>
-                <Form.Group controlId="formEmail">
-                  <Form.Label>Email Address</Form.Label>
-                  <Form.Control type="email" placeholder="Example@gmail.com" />
-                  <Form.Text className="text-muted">
-                    We'll never share your email adress trust us.
-                  </Form.Text>
-                </Form.Group>
-              </Col>
-              <Col md>
-                <Form.Group controlId="formPassword">
-                  <Form.Label>Password</Form.Label>
-                  <Form.Control type="password" placeholder="*******" />
-                </Form.Group>
-              </Col>
-            </Row>
-            <Button variant="secondary" type="submit">
-              Login
-            </Button>
-          </Form>
-
-          <Card className="mb-3 p-4" style={{ color: "#000" }}>
-            <Card.Img src="https://picsum.photos/200/50" />
+    <Router>
+      <div className="App" style={{ userSelect: "none" }}>
+        <Container className="w-50">
+          <Card className="m-5">
+            <Card.Header>
+              <Header
+                title="Naz Task Tracker App"
+                onAdd={() => setShowAddTask(!showAddTask)}
+                showAdd={showAddTask}
+              />
+            </Card.Header>
             <Card.Body>
-              <Card.Title>Card Example</Card.Title>
-              <Card.Text>This is an example of react boostrap cards</Card.Text>
-              <Button variant="primary">Read More</Button>
+              <Route
+                path="/"
+                exact
+                render={(props) => (
+                  <>
+                    {showAddTask && <AddTask onAdd={addTask} />}
+                    {tasks.length > 0 ? (
+                      <Tasks
+                        tasks={tasks}
+                        onDelete={deleteTask}
+                        onToggle={toggleReminder}
+                        className="m-4 p-4"
+                      />
+                    ) : (
+                      "No Tasks to Show"
+                    )}
+                  </>
+                )}
+              />
+              <Route path="/about" component={About} />
+              <Footer />
             </Card.Body>
           </Card>
-          <Breadcrumb>
-            <Breadcrumb.Item>Test</Breadcrumb.Item>
-            <Breadcrumb.Item>Test2</Breadcrumb.Item>
-            <Breadcrumb.Item active>Test3</Breadcrumb.Item>
-          </Breadcrumb>
-          <Alert variant="success">This is a Button</Alert>
-          <Button>Test Button</Button>
         </Container>
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+      </div>
+    </Router>
   );
-}
+};
 
 export default App;
-
-{
-  /* <Container>
-  <Form>
-    <Row>
-      <Col md>
-        <Form.Group controlId="formEmail">
-          <Form.Label>Email Address</Form.Label>
-          <Form.Control type="email" placeholder="Example@gmail.com" />
-          <Form.Text className="text-muted">
-            We'll never share your email adress trust us.
-          </Form.Text>
-        </Form.Group>
-      </Col>
-      <Col md>
-        <Form.Group controlId="formPassword">
-          <Form.Label>Password</Form.Label>
-          <Form.Control type="password" placeholder="*******" />
-        </Form.Group>
-      </Col>
-    </Row>
-    <Button variant="secondary" type="submit">
-      Login
-    </Button>
-  </Form>
-
-  <Card className="mb-3 p-4" style={{ color: "#000" }}>
-    <Card.Img src="https://picsum.photos/200/50" />
-    <Card.Body>
-      <Card.Title>Card Example</Card.Title>
-      <Card.Text>This is an example of react boostrap cards</Card.Text>
-      <Button variant="primary">Read More</Button>
-    </Card.Body>
-  </Card>
-  <Breadcrumb>
-    <Breadcrumb.Item>Test</Breadcrumb.Item>
-    <Breadcrumb.Item>Test2</Breadcrumb.Item>
-    <Breadcrumb.Item active>Test3</Breadcrumb.Item>
-  </Breadcrumb>
-  <Alert variant="success">This is a Button</Alert>
-  <Button>Test Button</Button>
-</Container> */
-}
